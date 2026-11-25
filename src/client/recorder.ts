@@ -212,7 +212,8 @@ export class SegmentedRecorder {
       const voiced = rms > Math.max(0.006, this.noiseFloor * 3);
       this.silentMs = voiced ? 0 : this.silentMs + 50;
       if (voiced) this.lastVoiceAt = now;
-      this.events.onLevel?.(Math.min(1, rms * 6));
+      // perceptual (dB) scale: -60 dBFS → 0, -6 dBFS → 1, so quiet and loud speech look different
+      this.events.onLevel?.(Math.max(0, Math.min(1, (20 * Math.log10(rms + 1e-7) + 60) / 54)));
       const silentLong = now - this.lastVoiceAt > 8000;
       if (silentLong !== this.silenceWarned) {
         this.silenceWarned = silentLong;

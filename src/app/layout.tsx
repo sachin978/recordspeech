@@ -1,27 +1,27 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import "@fontsource-variable/inter";
 import "./globals.css";
+import { Sidebar } from "@/components/ui/Nav";
+import { Toaster } from "@/components/ui/Toast";
 
 export const metadata: Metadata = {
-  title: "RecordSpeech",
-  description: "Personal AI English speaking coach — speak, pause, compare, understand your mistakes.",
+  title: "RecordSpeech — your English speaking coach",
+  description: "Speak naturally. Understand your mistakes. Express yourself better.",
 };
+
+export const viewport: Viewport = { themeColor: "#0B1020", width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <header className="top">
-          {/* plain links (full page loads) so the "unsaved recording" warning always fires */}
-          <a href="/" className="brand">
-            RecordSpeech
-          </a>
-          <nav>
-            <a href="/">Record</a>
-            <a href="/history">History</a>
-            <a href="/progress">Progress</a>
-          </nav>
-        </header>
-        <main>{children}</main>
+        <div className="shell">
+          <Sidebar />
+          <main className="main">
+            <div className="container">{children}</div>
+          </main>
+        </div>
+        <Toaster />
       </body>
     </html>
   );
