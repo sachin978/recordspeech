@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { config } from "./config";
+import { CATEGORY_LABELS } from "./types";
 import type {
   ContextType,
   Sentence,
@@ -249,6 +250,11 @@ export function listSessions(limit = 200): SessionSummary[] {
       grammarOk: stats?.grammarOk ?? 0,
       analysedSentences: stats?.analysedSentences ?? 0,
       mistakes: r.n_mistakes,
+      topMistake: stats?.repeatedMistakes[0]
+        ? stats.repeatedMistakes[0].pattern || CATEGORY_LABELS[stats.repeatedMistakes[0].category]
+        : stats?.categories[0]
+          ? CATEGORY_LABELS[stats.categories[0].category]
+          : null,
       preview: (r.first_sentence ?? "").slice(0, 140),
     };
   });

@@ -164,6 +164,8 @@ export interface SessionSummary {
   grammarOk: number;
   analysedSentences: number;
   mistakes: number;
+  /** most repeated mistake pattern (or most common mistake type) in the session */
+  topMistake: string | null;
   preview: string;
 }
 

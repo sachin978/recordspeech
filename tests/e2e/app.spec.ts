@@ -73,6 +73,18 @@ test("speak → pause & analyse → compare → resume adds a part → history",
   await page.getByRole("button", { name: "More natural" }).click();
   await expect(row1.locator(".right")).toContainText("I've been working here for two years.");
 
+  // expandable sentence explanation
+  await row1.locator(".expand-btn").click();
+  await expect(page.locator("#detail-1")).toContainText("Correct version");
+  await expect(page.locator("#detail-1")).toContainText("Natural English");
+  await expect(row1.locator(".expand-btn")).toHaveAttribute("aria-expanded", "true");
+  // copy gives feedback (toast)
+  await page.getByRole("button", { name: "Copy" }).first().click();
+  await expect(page.locator(".toast", { hasText: "What you said copied to clipboard" })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("I am working here since two years.");
+  // summary strip
+  await expect(page.getByTestId("summary")).toContainText("Grammar mistakes");
+
   // Understand your mistakes + feedback + separate explanation section
   const mistakes = page.locator("#mistakes");
   await expect(mistakes).toContainText("Use 'for' with a length of time");
@@ -98,6 +110,48 @@ test("speak → pause & analyse → compare → resume adds a part → history",
 
   await page.goto("/progress");
   await expect(page.locator("body")).toContainText("Recurring mistake types");
+});
+
+test("processing stages follow real server progress", async ({ page }) => {
+  await control({ delayMs: 900 });
+  await page.goto("/?segmentSec=4");
+  await record(page, 5);
+  await page.getByRole("button", { name: /Pause & Analyse/ }).click();
+  const panel = page.getByTestId("progress");
+  await expect(panel).toBeVisible();
+  // saving cannot be done while speech-to-text is still running
+  await expect(panel.locator('[data-stage="transcribe"]')).toHaveAttribute("data-state", "active");
+  await expect(panel.locator('[data-stage="save"]')).toHaveAttribute("data-state", "pending");
+  await expect(panel.locator('[data-stage="upload"]')).toHaveAttribute("data-state", "done");
+  await expect(panel.locator('[data-stage="transcribe"]')).toHaveAttribute("data-state", "done", { timeout: 20_000 });
+  await expect(panel.locator('[data-stage="analyse"]')).toHaveAttribute("data-state", /active|done/);
+  await waitForResult(page);
+});
+
+test("history search, settings preferences and mobile layout", async ({ page, browser }) => {
+  await page.goto("/history");
+  await page.getByLabel("Search sessions").fill("zzzz-no-such-topic");
+  await expect(page.getByText("No matching sessions")).toBeVisible();
+  await page.getByLabel("Search sessions").fill("URL Shortener");
+  await expect(page.getByTestId("history").locator("li").first()).toContainText("URL Shortener");
+
+  await page.goto("/settings");
+  await expect(page.getByText("API key configured")).toBeVisible();
+  await page.getByLabel("Keep audio by default").check();
+  await page.goto("/");
+  await expect(page.getByRole("checkbox", { name: /Keep a copy of the audio/ })).toBeChecked();
+  await page.goto("/settings");
+  await page.getByLabel("Keep audio by default").uncheck();
+
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const m = await ctx.newPage();
+  for (const path of ["/", "/history", "/progress", "/settings"]) {
+    await m.goto(path);
+    expect(await m.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), path).toBeLessThanOrEqual(0);
+  }
+  await m.goto("/");
+  await expect(m.getByRole("button", { name: /Start Recording/ })).toBeInViewport();
+  await ctx.close();
 });
 
 test("discard before analysis sends nothing", async ({ page }) => {

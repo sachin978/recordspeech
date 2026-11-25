@@ -60,6 +60,23 @@ Without a key, the app still opens and records. It shows a banner explaining wha
 
 Mistakes are classified into three levels: **Grammar mistake**, **Could sound more natural** (correct but awkward), and **Correct**. Correct sentences are never "corrected".
 
+## The interface
+
+A dark, calm design system (Midnight Navy + Electric Violet + Soft Cyan, Inter typeface). It is one stylesheet with CSS variables in `src/app/globals.css` and no UI library.
+
+* **Practice**: an optional topic (with quick-pick ideas), then the recording workspace. It has a mic indicator and a waveform, both driven by the **real microphone level** (dB-scaled), plus a large timer and clear controls.
+* **Processing**: five stages (audio → speech-to-text → grammar & sentence analysis → personalised feedback → saving). Each one moves only when the server reports it. Grammar and sentence analysis run in one request, and feedback runs alongside it, so both can show as active at once.
+* **Results**:
+  * a summary strip (topic, duration, sentences, grammar mistakes, improvement tips)
+  * the aligned *What you said / Improved English* panels; click any sentence for the correct version, what was wrong and why, natural and professional versions, and a context-specific suggestion
+  * *Understand Your Mistakes*, grouped by type
+  * a cyan-accented *How well you explained it* section, separate from English mistakes
+  * speaking feedback on six aspects; each Strong / Developing / Focus label follows a stated counting rule (hover to see it)
+* **History**: search, filters, and each session's main recurring mistake.
+* **Progress**: practice frequency, streak, grammar accuracy, filler words and sentence-construction charts (each has a table view), recurring mistake types with trends, and repeated phrases.
+* **Settings**: AI connection status, default "keep audio", default improved view, clearing an unsent recording, and a privacy summary.
+* **Behaviour**: works on desktop, tablet and mobile (sidebar → bottom tab bar, stacked comparison), respects `prefers-reduced-motion`, has keyboard-focusable tooltips, and shows toasts for copy, save and errors.
+
 ## Architecture
 
 ```
@@ -104,7 +121,7 @@ Pause & Analyse ── multipart upload ─────────────�
 | **Parallel sentence batches + one feedback call** | For long sessions, output length dominates latency, so batches of 8 sentences run concurrently. Short sessions still need only 2 calls |
 | **Deterministic numbers** | Accuracy, filler counts, words per minute and trends are counted in code from the transcript and the analysis, and each shows its basis. There are no opaque AI scores. Pronunciation and accent are **not** assessed (text only) |
 | **better-sqlite3 v12** | Simple, fast, synchronous, a single file. v12 because v13 needs Node 22+ |
-| **No UI framework/CSS library** | One plain stylesheet with automatic dark mode |
+| **No UI framework/CSS library** | One stylesheet with design tokens; inline SVG icons and charts; only dependency added is the self-hosted Inter font (`@fontsource-variable/inter`, works offline) |
 
 ## Privacy: where your data goes
 

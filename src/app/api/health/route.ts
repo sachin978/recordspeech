@@ -12,5 +12,6 @@ export async function GET(req: Request) {
     configured: isConfigured(),
     transcribeModel: config.transcribeModel(),
     analysisModel: config.analysisModel(),
+    dataDir: config.dataDir(),
   });
 }

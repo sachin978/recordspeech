@@ -43,6 +43,50 @@ export interface Progress {
   categories: CategoryProgress[];
   patterns: { pattern: string; count: number; sessions: number; lastSeen: string; example: { original: string; corrected: string } }[];
   insights: string[];
+  /** sessions and minutes per week, oldest → newest, last 8 weeks (weeks start Monday) */
+  weekly: { weekStart: string; sessions: number; minutes: number }[];
+  /** consecutive days (ending today or yesterday) with at least one session */
+  streakDays: number;
+  thisWeekSessions: number;
+  /** sentence-construction issues (structure + word order) per analysed sentence, per session */
+  construction: { rates: number[]; trend: Trend; earlier: number | null; recent: number | null };
+  fillerTrend: Trend;
+}
+
+const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
+/** Practice frequency (local time): last `weeks` weeks and the current daily streak. */
+export function practiceStats(dates: string[], now = new Date(), weeks = 8) {
+  const monday = new Date(now);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const starts = Array.from({ length: weeks }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(d.getDate() - 7 * (weeks - 1 - i));
+    return d;
+  });
+  const weekly = starts.map((d) => ({ weekStart: d.toISOString(), sessions: 0, minutes: 0 }));
+  const days = new Set<string>();
+  for (const iso of dates) {
+    const d = new Date(iso);
+    days.add(dayKey(d));
+    for (let i = weeks - 1; i >= 0; i--) {
+      if (d >= starts[i]) {
+        const end = new Date(starts[i]);
+        end.setDate(end.getDate() + 7);
+        if (d < end) weekly[i].sessions++;
+        break;
+      }
+    }
+  }
+  let streak = 0;
+  const cur = new Date(now);
+  if (!days.has(dayKey(cur))) cur.setDate(cur.getDate() - 1); // a streak is still alive if you practised yesterday
+  while (days.has(dayKey(cur))) {
+    streak++;
+    cur.setDate(cur.getDate() - 1);
+  }
+  return { weekly, streakDays: streak, thisWeekSessions: weekly[weeks - 1].sessions };
 }
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
@@ -141,7 +185,29 @@ export function computeProgress(sessions: ProgressSession[], mistakes: ProgressM
   if (acc.trend === "improving") insights.push(`Your sentence accuracy is improving: ${Math.round(acc.earlier!)}% → ${Math.round(acc.recent!)}% of sentences without grammar mistakes.`);
   if (acc.trend === "worse") insights.push(`Your sentence accuracy dropped recently: ${Math.round(acc.earlier!)}% → ${Math.round(acc.recent!)}%. Longer or harder topics can cause this.`);
 
+  const practice = practiceStats(sessions.map((s) => s.createdAt));
+  for (const s of sessions) {
+    const w = practice.weekly.findLast((x) => new Date(s.createdAt) >= new Date(x.weekStart));
+    if (w) w.minutes += s.durationSec / 60;
+  }
+  const consCounts = new Array(withStats.length).fill(0);
+  for (const m of mistakes) {
+    const i = order.get(m.session_id);
+    if (i !== undefined && (m.category === "sentence_structure" || m.category === "word_order")) consCounts[i]++;
+  }
+  const consRates = consCounts.map((c, i) => c / withStats[i].stats!.analysedSentences);
+  const cons = trendOf(consRates);
+  if (cons.trend === "improving")
+    insights.push(`Your sentence construction is improving: ${fmtRate(cons.earlier)} → ${fmtRate(cons.recent)} structure issues per 10 sentences.`);
+  const fill = trendOf(sessionRows.map((r) => r.fillersPer100));
+  if (fill.trend === "improving") insights.push(`You're using fewer filler words: ${fill.earlier!.toFixed(1)} → ${fill.recent!.toFixed(1)} per 100 words.`);
+
   return {
+    weekly: practice.weekly.map((w) => ({ ...w, minutes: Math.round(w.minutes) })),
+    streakDays: practice.streakDays,
+    thisWeekSessions: practice.thisWeekSessions,
+    construction: { rates: consRates, trend: cons.trend, earlier: cons.earlier, recent: cons.recent },
+    fillerTrend: fill.trend,
     sessionCount: sessions.length,
     totalSeconds: Math.round(sessions.reduce((a, s) => a + s.durationSec, 0)),
     totalSentences: withStats.reduce((a, s) => a + s.stats!.sentences, 0),

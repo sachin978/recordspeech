@@ -15,7 +15,7 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${APP_PORT}`,
     channel: "chrome",
     headless: true,
-    permissions: ["microphone"],
+    permissions: ["microphone", "clipboard-read", "clipboard-write"],
     launchOptions: {
       args: ["--use-fake-device-for-media-stream", `--use-file-for-fake-audio-capture=${FIXTURES}/speechlike.wav`, "--autoplay-policy=no-user-gesture-required"],
     },
