@@ -23,7 +23,7 @@ export const config = {
   maxConcurrency: () => intEnv("OPENAI_MAX_CONCURRENCY", 6, 1, 16),
   transcribeTimeoutMs: () => intEnv("TRANSCRIBE_TIMEOUT_MS", 120_000, 5_000, 600_000),
   analysisTimeoutMs: () => intEnv("ANALYSIS_TIMEOUT_MS", 120_000, 5_000, 600_000),
-  dataDir: () => path.resolve(process.env.DATA_DIR || path.join(process.cwd(), "data")),
+  dataDir: () => path.resolve(/*turbopackIgnore: true*/ process.env.DATA_DIR || path.join(/*turbopackIgnore: true*/ process.cwd(), "data")),
 };
 
 export function isConfigured(): boolean {
