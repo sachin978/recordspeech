@@ -1,0 +1,36 @@
+# dependencies & build
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# secrets — never commit
+.env
+.env.*
+!.env.example
+
+# local data: learning history database and any retained audio
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# audio recordings (test fixtures are generated, not committed)
+*.webm
+*.ogg
+*.wav
+*.mp3
+*.m4a
+*.mp4
+
+# test output
+test-results/
+playwright-report/
+.tmp/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
