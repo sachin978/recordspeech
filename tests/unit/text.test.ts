@@ -145,3 +145,11 @@ describe("context classification", () => {
     expect(matchedContextTypes("Discussing a technical issue with my manager", "technical")).toEqual(["technical", "professional"]);
   });
 });
+
+import { sanitize } from "@/lib/openai";
+describe("sanitize", () => {
+  it("removes API keys and bearer tokens", () => {
+    const s = sanitize("Incorrect API key provided: sk-proj-abcDEF123_456-xyz. Header Bearer sk-abc.def");
+    expect(s).not.toMatch(/abcDEF123|sk-abc\.def/);
+  });
+});
