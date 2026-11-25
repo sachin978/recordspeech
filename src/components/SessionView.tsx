@@ -439,7 +439,8 @@ function Communication({ session }: { session: Session }) {
 }
 
 export function SessionView({ session, live = false, onRetry, retrying }: { session: Session; live?: boolean; onRetry?: () => void; retrying?: boolean }) {
-  const needsRetry = session.status === "partial" || session.status === "failed" || (!session.feedback && session.status !== "analysing");
+  // "analysing" while nobody is streaming it means the server stopped mid-way (e.g. restarted) → offer retry
+  const needsRetry = session.status === "partial" || session.status === "failed" || (!live && (session.status === "analysing" || !session.feedback));
   return (
     <div className="session" data-testid="session-view" data-status={session.status}>
       <div className="session-head">

@@ -8,9 +8,9 @@ import { DATA_DIR, MOCK, TEST_KEY } from "./env";
 const PORT = 3212;
 const BASE = `http://127.0.0.1:${PORT}`;
 
-function startServer(): ChildProcess {
+function startServer(key = TEST_KEY): ChildProcess {
   return spawn("npx", ["next", "start", "-H", "127.0.0.1", "-p", String(PORT)], {
-    env: { ...process.env, OPENAI_API_KEY: TEST_KEY, OPENAI_BASE_URL: `${MOCK}/v1`, DATA_DIR },
+    env: { ...process.env, OPENAI_API_KEY: key, OPENAI_BASE_URL: `${MOCK}/v1`, DATA_DIR },
     stdio: "ignore",
     detached: true,
   });
@@ -67,6 +67,24 @@ test("saved sessions survive a server restart", async () => {
     expect(s.feedback.overall).toBeTruthy();
     const list = (await (await fetch(`${BASE}/api/sessions`)).json()).sessions;
     expect(list.some((x: { id: string }) => x.id === id)).toBe(true);
+  } finally {
+    kill(server);
+  }
+});
+
+test("without an API key the app explains what is missing and never fakes results", async ({ page }) => {
+  const server = startServer("");
+  try {
+    await waitUp();
+    const health = await (await fetch(`${BASE}/api/health`)).json();
+    expect(health.configured).toBe(false);
+    const form = new FormData();
+    form.append("audio", new Blob([new Uint8Array(4000)], { type: "audio/webm" }), "segment-1.webm");
+    const events = (await (await fetch(`${BASE}/api/analyse`, { method: "POST", body: form })).text()).trim().split("\n").map((l) => JSON.parse(l));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ type: "error", stage: "config", audioSafe: true });
+    await page.goto(BASE);
+    await expect(page.getByText("OpenAI API key missing")).toBeVisible();
   } finally {
     kill(server);
   }

@@ -125,7 +125,8 @@ describe("progress", () => {
   it("detects improving and worsening trends", () => {
     expect(trendOf([0.5, 0.4, 0.1, 0.1]).trend).toBe("improving");
     expect(trendOf([0.1, 0.1, 0.4, 0.5]).trend).toBe("worse");
-    expect(trendOf([0.2, 0.21, 0.2]).trend).toBe("steady");
+    expect(trendOf([0.2, 0.21, 0.2, 0.2]).trend).toBe("steady");
+    expect(trendOf([0.5, 0.3, 0.1]).trend).toBe("not-enough-data");
     expect(trendOf([0.2, 0.1]).trend).toBe("not-enough-data");
   });
   it("builds insights from stored mistakes", () => {

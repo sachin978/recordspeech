@@ -1,4 +1,5 @@
 import { progressData } from "@/lib/db";
+import { fmtDuration } from "@/lib/format";
 import { computeProgress, type Trend } from "@/lib/progress";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +8,7 @@ const TREND: Record<Trend, { label: string; cls: string }> = {
   improving: { label: "↓ less frequent", cls: "badge ok" },
   worse: { label: "↑ more frequent", cls: "badge bad" },
   steady: { label: "→ about the same", cls: "badge" },
-  "not-enough-data": { label: "need 3+ sessions", cls: "badge muted" },
+  "not-enough-data": { label: "need 4+ sessions", cls: "badge muted" },
 };
 
 /** Tiny inline bar chart: one bar per session, oldest → newest. */
@@ -34,7 +35,7 @@ export default function ProgressPage() {
       <section className="card">
         <h1>Your progress</h1>
         <p className="muted">
-          {p.sessionCount} sessions · {p.totalMinutes} minutes of speaking · {p.totalSentences} sentences analysed
+          {p.sessionCount} sessions · {fmtDuration(p.totalSeconds)} of speaking · {p.totalSentences} sentences analysed
         </p>
         {p.sessions.length === 0 ? (
           <p>Record and analyse a few sessions to see patterns here.</p>

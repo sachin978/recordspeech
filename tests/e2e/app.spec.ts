@@ -165,6 +165,28 @@ test("malformed AI response is retried and validated", async ({ page }) => {
   await waitForResult(page);
 });
 
+test("microphone disconnected mid-recording keeps the audio", async ({ page }) => {
+  // capture the stream so the test can simulate the device being unplugged
+  await page.addInitScript(() => {
+    const orig = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = async (c) => {
+      const s = await orig(c);
+      (window as unknown as { __rsStream: MediaStream }).__rsStream = s;
+      return s;
+    };
+  });
+  await page.goto("/?segmentSec=4");
+  await record(page, 5);
+  await page.evaluate(() => {
+    const t = (window as unknown as { __rsStream: MediaStream }).__rsStream.getAudioTracks()[0];
+    t.dispatchEvent(new Event("ended")); // what the browser fires when a mic is unplugged
+  });
+  await expect(page.getByTestId("error")).toContainText("microphone was disconnected");
+  await expect(page.getByTestId("studio")).toHaveAttribute("data-phase", "stopped");
+  await page.getByRole("button", { name: "Analyse", exact: true }).click();
+  await waitForResult(page);
+});
+
 test("microphone permission denied is explained", async ({ browser }) => {
   const ctx = await browser.newContext({ permissions: [] });
   const page = await ctx.newPage();

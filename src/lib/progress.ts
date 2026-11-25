@@ -36,7 +36,7 @@ export interface CategoryProgress {
 
 export interface Progress {
   sessionCount: number;
-  totalMinutes: number;
+  totalSeconds: number;
   totalSentences: number;
   sessions: { id: string; createdAt: string; context: string; accuracyPct: number | null; sentences: number; fillersPer100: number | null }[];
   accuracyTrend: Trend;
@@ -50,7 +50,7 @@ const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.l
 /** Compare the older half of sessions with the newer half. For mistake rates, lower is better. */
 export function trendOf(values: (number | null)[], lowerIsBetter = true): { trend: Trend; earlier: number | null; recent: number | null } {
   const xs = values.filter((v): v is number => v !== null);
-  if (xs.length < 3) return { trend: "not-enough-data", earlier: mean(xs.slice(0, 1)), recent: mean(xs.slice(-1)) };
+  if (xs.length < 4) return { trend: "not-enough-data", earlier: mean(xs.slice(0, 1)), recent: mean(xs.slice(-1)) };
   const half = Math.floor(xs.length / 2);
   const earlier = mean(xs.slice(0, half))!;
   const recent = mean(xs.slice(xs.length - half))!;
@@ -130,11 +130,11 @@ export function computeProgress(sessions: ProgressSession[], mistakes: ProgressM
   const n = withStats.length;
   for (const c of categories.slice(0, 5)) {
     if (c.sessionsWithIt >= 2 && c.sessionsWithIt >= Math.ceil(n / 2))
-      insights.push(`You frequently make ${c.label.toLowerCase()} mistakes (in ${c.sessionsWithIt} of ${n} sessions).`);
+      insights.push(`You frequently make mistakes with ${lower(c.label)} (in ${c.sessionsWithIt} of ${n} sessions).`);
     if (c.trend === "improving")
-      insights.push(`${c.label} mistakes are becoming less frequent: ${fmtRate(c.earlierRate)} → ${fmtRate(c.recentRate)} per 10 sentences.`);
+      insights.push(`Mistakes with ${lower(c.label)} are becoming less frequent: ${fmtRate(c.earlierRate)} → ${fmtRate(c.recentRate)} per 10 sentences.`);
     if (c.trend === "worse")
-      insights.push(`${c.label} mistakes have increased recently: ${fmtRate(c.earlierRate)} → ${fmtRate(c.recentRate)} per 10 sentences.`);
+      insights.push(`Mistakes with ${lower(c.label)} have increased recently: ${fmtRate(c.earlierRate)} → ${fmtRate(c.recentRate)} per 10 sentences.`);
   }
   for (const p of patterns.slice(0, 3))
     if (p.sessions >= 2) insights.push(`You repeatedly say "${p.example.original}" — try "${p.example.corrected}" (${p.pattern}; seen in ${p.sessions} sessions).`);
@@ -143,15 +143,17 @@ export function computeProgress(sessions: ProgressSession[], mistakes: ProgressM
 
   return {
     sessionCount: sessions.length,
-    totalMinutes: Math.round(sessions.reduce((a, s) => a + s.durationSec, 0) / 60),
+    totalSeconds: Math.round(sessions.reduce((a, s) => a + s.durationSec, 0)),
     totalSentences: withStats.reduce((a, s) => a + s.stats!.sentences, 0),
     sessions: sessionRows,
     accuracyTrend: acc.trend,
     categories,
     patterns,
-    insights,
+    insights: insights.slice(0, 8),
   };
 }
+
+const lower = (label: string) => label.charAt(0).toLowerCase() + label.slice(1);
 
 function fmtRate(r: number | null): string {
   return r === null ? "–" : (r * 10).toFixed(1);
